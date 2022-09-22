@@ -26,11 +26,13 @@ router.get('/send', (req, res) => {
         StringValue: 'API1',
       },
     },
+    MessageDeduplicationId: 'API1+',
+    MessageGroupId: 'Test',
     MessageBody: JSON.stringify({
       Whatever1: Math.random() * 100,
       Whatever2: Math.random() * 100,
     }),
-    QueueUrl: `${process.env.SQS_QUEUE_URL}#request`,
+    QueueUrl: process.env.SQS_QUEUE_URL,
   };
 
   sqs.sendMessage(params, function (err, data) {
@@ -45,27 +47,31 @@ router.get('/send', (req, res) => {
 });
 
 var receiveMessageParams = {
-  QueueUrl: `${process.env.SQS_QUEUE_URL}#reply`,
+  QueueUrl: process.env.SQS_QUEUE_URL,
   MaxNumberOfMessages: 10,
   VisibilityTimeout: 10,
-  WaitTimeSeconds: 10,
+  WaitTimeSeconds: 0,
   MessageAttributeNames: ['All'],
 };
 
 const receiveMessage = () => {
+  console.log('API1');
   sqs.receiveMessage(receiveMessageParams, (err, data) => {
     if (err) {
       console.log(err);
     }
 
     if (data.Messages) {
+      console.log('POLLING API1');
       for (const {
         MessageAttributes: metadata,
         Body,
         ReceiptHandle: id,
       } of data.Messages) {
-        handleMessage(Body, metadata);
-        removeFromQueue(id);
+        if (metadata.Sender.StringValue === 'API2') {
+          handleMessage(Body, metadata);
+          removeFromQueue(id);
+        }
       }
       receiveMessage();
     } else {
@@ -78,13 +84,13 @@ const receiveMessage = () => {
 
 const handleMessage = (data: string, metadata) => {
   var body = JSON.parse(data);
-  console.log(body);
+  console.log(new Date(), body);
 };
 
 const removeFromQueue = function (id: string) {
   sqs.deleteMessage(
     {
-      QueueUrl: `${process.env.SQS_QUEUE_URL}#reply`,
+      QueueUrl: process.env.SQS_QUEUE_URL,
       ReceiptHandle: id,
     },
     function (err, data) {

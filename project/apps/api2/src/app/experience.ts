@@ -13,20 +13,23 @@ const queueURL = process.env.SQS_QUEUE_URL;
 const REFRESH_TIMEOUT_IN_SECOND = 10;
 
 var receiveMessageParams = {
-  QueueUrl: `${process.env.SQS_QUEUE_URL}#request`,
+  QueueUrl: process.env.SQS_QUEUE_URL,
   MaxNumberOfMessages: 10,
   VisibilityTimeout: 10,
-  WaitTimeSeconds: 10,
+  WaitTimeSeconds: 0,
   MessageAttributeNames: ['All'],
 };
 
 const receiveMessage = () => {
+  console.log('API2');
   sqs.receiveMessage(receiveMessageParams, (err, data) => {
+    console.log('API2 +');
     if (err) {
       console.log(err);
     }
 
     if (data.Messages) {
+      console.log('POLLING API2');
       for (const {
         MessageAttributes: metadata,
         Body,
@@ -48,8 +51,8 @@ const receiveMessage = () => {
 
 const handleMessage = (data: string, metadata) => {
   var body = JSON.parse(data);
-  console.log(body);
-  sendMessage(body.Whatever1 * body.Whatever2, metadata);
+  console.log(new Date(), body);
+  sendMessage(body.Whatever1 + body.Whatever2, metadata);
 };
 
 const sendMessage = (result, metadata) => {
@@ -60,10 +63,12 @@ const sendMessage = (result, metadata) => {
         StringValue: 'API2',
       },
     },
+    MessageDeduplicationId: 'API2+',
+    MessageGroupId: 'Test',
     MessageBody: JSON.stringify({
       result: result,
     }),
-    QueueUrl: `${process.env.SQS_QUEUE_URL}#reply`,
+    QueueUrl: process.env.SQS_QUEUE_URL,
   };
 
   sqs.sendMessage(params, function (err, data) {
@@ -78,7 +83,7 @@ const sendMessage = (result, metadata) => {
 var removeFromQueue = function (id: string) {
   sqs.deleteMessage(
     {
-      QueueUrl: `${process.env.SQS_QUEUE_URL}#request`,
+      QueueUrl: process.env.SQS_QUEUE_URL,
       ReceiptHandle: id,
     },
     function (err, data) {
