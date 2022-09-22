@@ -9,94 +9,77 @@ const SQS_CONFIG = {
 };
 
 const sqs = new AWS.SQS(SQS_CONFIG);
-
 const queueURL = process.env.SQS_QUEUE_URL;
-
-/**
-var params = {
-  AttributeNames: ['SentTimestamp'],
-  MaxNumberOfMessages: 10,
-  MessageAttributeNames: ['All'],
-  QueueUrl: `${process.env.SQS_QUEUE_URL}#request`,
-  VisibilityTimeout: 20,
-  WaitTimeSeconds: 0,
-};
-
-
-sqs.receiveMessage(params, function (err, data) {
-  if (err) {
-    console.log('Receive Error', err);
-  } else if (data.Messages) {
-    var deleteParams = {
-      QueueUrl: `${process.env.SQS_QUEUE_URL}#request`,
-      ReceiptHandle: data.Messages[0].ReceiptHandle,
-    };
-    sqs.deleteMessage(deleteParams, function (err, data) {
-      if (err) {
-        console.log('Delete Error', err);
-      } else {
-        console.log('Message Deleted', data);
-      }
-    });
-
-    sqs.sendMessage(
-      {
-        DelaySeconds: 10,
-        MessageAttributes: {
-          Test: {
-            DataType: 'String',
-            StringValue: 'Data1',
-          },
-        },
-        MessageBody: 'This is a test',
-        QueueUrl: `${process.env.SQS_QUEUE_URL}#reply`,
-      },
-      function (err, data) {
-        if (err) {
-          console.log('Error', err);
-        } else {
-          console.log('Success', data.MessageId);
-        }
-      }
-    );
-  }
-});
-**/
+const REFRESH_TIMEOUT_IN_SECOND = 10;
 
 var receiveMessageParams = {
   QueueUrl: `${process.env.SQS_QUEUE_URL}#request`,
   MaxNumberOfMessages: 10,
   VisibilityTimeout: 10,
   WaitTimeSeconds: 10,
+  MessageAttributeNames: ['All'],
 };
 
-var receiveMessage = function () {
-  console.log('RUN');
-  sqs.receiveMessage(receiveMessageParams, function (err, data) {
+const receiveMessage = () => {
+  sqs.receiveMessage(receiveMessageParams, (err, data) => {
     if (err) {
       console.log(err);
     }
+
     if (data.Messages) {
-      for (var i = 0; i < data.Messages.length; i++) {
-        var message = data.Messages[i];
-        console.log(data.Messages);
-        removeFromQueue(message);
+      for (const {
+        MessageAttributes: metadata,
+        Body,
+        ReceiptHandle: id,
+      } of data.Messages) {
+        if (metadata.Sender.StringValue === 'API1') {
+          handleMessage(Body, metadata);
+          removeFromQueue(id);
+        }
       }
       receiveMessage();
     } else {
-      console.log('TIMEDOUT');
-      setTimeout(function () {
+      setTimeout(() => {
         receiveMessage();
-      }, 10 * 1000);
+      }, REFRESH_TIMEOUT_IN_SECOND * 1000);
     }
   });
 };
 
-var removeFromQueue = function (message) {
+const handleMessage = (data: string, metadata) => {
+  var body = JSON.parse(data);
+  console.log(body);
+  sendMessage(body.Whatever1 * body.Whatever2, metadata);
+};
+
+const sendMessage = (result, metadata) => {
+  var params = {
+    MessageAttributes: {
+      Sender: {
+        DataType: 'String',
+        StringValue: 'API2',
+      },
+    },
+    MessageBody: JSON.stringify({
+      result: result,
+    }),
+    QueueUrl: `${process.env.SQS_QUEUE_URL}#reply`,
+  };
+
+  sqs.sendMessage(params, function (err, data) {
+    if (err) {
+      console.log('Error', err);
+    } else {
+      console.log('Success', data.MessageId);
+    }
+  });
+};
+
+var removeFromQueue = function (id: string) {
   sqs.deleteMessage(
     {
       QueueUrl: `${process.env.SQS_QUEUE_URL}#request`,
-      ReceiptHandle: message.ReceiptHandle,
+      ReceiptHandle: id,
     },
     function (err, data) {
       err && console.log(err);

@@ -9,27 +9,27 @@ const SQS_CONFIG = {
 };
 
 const sqs = new AWS.SQS(SQS_CONFIG);
+const REFRESH_TIMEOUT_IN_SECOND = 10;
 
+/**
+ * Send a message
+ */
 router.get('/send', (req, res) => {
   var params = {
     MessageAttributes: {
-      Title: {
+      Date: {
         DataType: 'String',
-        StringValue: 'The Whistler',
+        StringValue: new Date().toString(),
       },
-      Author: {
+      Sender: {
         DataType: 'String',
-        StringValue: 'John Grisham',
-      },
-      WeeksOn: {
-        DataType: 'Number',
-        StringValue: '6',
+        StringValue: 'API1',
       },
     },
-    MessageBody:
-      'Information about current NY Times fiction bestseller for week of 12/11/2016.',
-    // MessageDeduplicationId: "TheWhistler",  // Required for FIFO queues
-    // MessageGroupId: "Group1",  // Required for FIFO queues
+    MessageBody: JSON.stringify({
+      Whatever1: Math.random() * 100,
+      Whatever2: Math.random() * 100,
+    }),
     QueueUrl: `${process.env.SQS_QUEUE_URL}#request`,
   };
 
@@ -44,33 +44,56 @@ router.get('/send', (req, res) => {
   res.send(true);
 });
 
-sqs.receiveMessage(
-  {
-    AttributeNames: ['SentTimestamp'],
-    MaxNumberOfMessages: 10,
-    MessageAttributeNames: ['All'],
-    QueueUrl: `${process.env.SQS_QUEUE_URL}#reply`,
-    VisibilityTimeout: 20,
-    WaitTimeSeconds: 0,
-  },
-  function (err, data) {
+var receiveMessageParams = {
+  QueueUrl: `${process.env.SQS_QUEUE_URL}#reply`,
+  MaxNumberOfMessages: 10,
+  VisibilityTimeout: 10,
+  WaitTimeSeconds: 10,
+  MessageAttributeNames: ['All'],
+};
+
+const receiveMessage = () => {
+  sqs.receiveMessage(receiveMessageParams, (err, data) => {
     if (err) {
-      console.log('Receive Error', err);
-    } else if (data.Messages) {
-      var deleteParams = {
-        QueueUrl: `${process.env.SQS_QUEUE_URL}#reply`,
-        ReceiptHandle: data.Messages[0].ReceiptHandle,
-      };
-      sqs.deleteMessage(deleteParams, function (err, data) {
-        if (err) {
-          console.log('Delete Error', err);
-        } else {
-          console.log('Message Deleted', data);
-        }
-      });
+      console.log(err);
     }
-  }
-);
+
+    if (data.Messages) {
+      for (const {
+        MessageAttributes: metadata,
+        Body,
+        ReceiptHandle: id,
+      } of data.Messages) {
+        handleMessage(Body, metadata);
+        removeFromQueue(id);
+      }
+      receiveMessage();
+    } else {
+      setTimeout(() => {
+        receiveMessage();
+      }, REFRESH_TIMEOUT_IN_SECOND * 1000);
+    }
+  });
+};
+
+const handleMessage = (data: string, metadata) => {
+  var body = JSON.parse(data);
+  console.log(body);
+};
+
+const removeFromQueue = function (id: string) {
+  sqs.deleteMessage(
+    {
+      QueueUrl: `${process.env.SQS_QUEUE_URL}#reply`,
+      ReceiptHandle: id,
+    },
+    function (err, data) {
+      err && console.log(err);
+    }
+  );
+};
+
+receiveMessage();
 
 router.get('/health', (req, res) => {
   res.send({ status: 'working' });
