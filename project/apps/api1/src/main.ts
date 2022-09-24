@@ -5,6 +5,7 @@ const app = express();
 app.use(express.json());
 
 app.use('/', require('./app/experience'));
+app.use('/batch', require('./app/experience2'));
 
 const port = process.env.port || 3333;
 const server = app.listen(port, () => {

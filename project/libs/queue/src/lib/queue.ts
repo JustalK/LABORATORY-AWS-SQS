@@ -11,12 +11,19 @@ const SQS_CONFIG = {
 const sqs = new AWS.SQS(SQS_CONFIG);
 
 interface Message {
+  Id?: string;
   MessageAttributes?: any;
   MessageDeduplicationId: string;
   MessageGroupId: string;
   MessageBody: string;
-  QueueUrl: string;
+  QueueUrl?: string;
 }
+
+/**
+===============================================================================================================
+SEND MESSAGE
+===============================================================================================================
+ */
 
 export function sendMessage(url: string, data: string, attributes = null) {
   let params: Message = {
@@ -38,6 +45,12 @@ export function sendMessage(url: string, data: string, attributes = null) {
     }
   });
 }
+
+/**
+===============================================================================================================
+RECEIVE MESSAGE
+===============================================================================================================
+ */
 
 const receiveMessageParams = {
   MaxNumberOfMessages: 10,
@@ -78,6 +91,12 @@ export const receiveMessage = (
   });
 };
 
+/**
+===============================================================================================================
+DELETE MESSAGE
+===============================================================================================================
+ */
+
 export const deleteMessage = (url: string, id: string) => {
   sqs.deleteMessage(
     {
@@ -89,3 +108,45 @@ export const deleteMessage = (url: string, id: string) => {
     }
   );
 };
+
+/**
+===============================================================================================================
+===============================================================================================================
+BATCH PROCESS - SEND MESSAGES 
+===============================================================================================================
+===============================================================================================================
+ */
+
+export function sendBatchMessage(
+  url: string,
+  data: string[],
+  attributes = null
+) {
+  let params = {
+    QueueUrl: url,
+    Entries: [],
+  };
+
+  for (const d of data) {
+    let message: Message = {
+      Id: uniqid(),
+      MessageDeduplicationId: uniqid(),
+      MessageGroupId: 'Test',
+      MessageBody: d,
+    };
+
+    if (attributes) {
+      message.MessageAttributes = attributes;
+    }
+
+    params.Entries.push(message);
+  }
+
+  sqs.sendMessageBatch(params, function (err, data) {
+    if (err) {
+      console.log('Error', err);
+    } else {
+      console.log('Success', data.MessageId);
+    }
+  });
+}
