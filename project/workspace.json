@@ -3,6 +3,7 @@
   "version": 2,
   "projects": {
     "api1": "apps/api1",
-    "api2": "apps/api2"
+    "api2": "apps/api2",
+    "queue": "libs/queue"
   }
 }

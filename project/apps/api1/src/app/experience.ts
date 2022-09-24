@@ -1,16 +1,8 @@
 const express = require('express');
-const AWS = require('aws-sdk');
 const router = express.Router();
 const uniqid = require('uniqid');
-
-const SQS_CONFIG = {
-  accessKeyId: process.env.ACCESS_KEY,
-  secretAccessKey: process.env.SECRET_ACCESS_KEY,
-  region: process.env.REGION,
-};
-
-const sqs = new AWS.SQS(SQS_CONFIG);
 const REFRESH_TIMEOUT_IN_SECOND = 10;
+import { receiveMessage, sendMessage } from '@project/queue';
 
 /**
  * Send a message
@@ -36,13 +28,7 @@ router.get('/send', (req, res) => {
     QueueUrl: process.env.SQS_QUEUE_URL,
   };
 
-  sqs.sendMessage(params, function (err, data) {
-    if (err) {
-      console.log('Error', err);
-    } else {
-      console.log('Success', data.MessageId);
-    }
-  });
+  sendMessage(params);
 
   res.send(true);
 });
@@ -55,50 +41,16 @@ var receiveMessageParams = {
   MessageAttributeNames: ['All'],
 };
 
-const receiveMessage = () => {
-  console.log('API1');
-  sqs.receiveMessage(receiveMessageParams, (err, data) => {
-    if (err) {
-      console.log(err);
-    }
-
-    if (data.Messages) {
-      console.log('POLLING API1');
-      for (const {
-        MessageAttributes: metadata,
-        Body,
-        ReceiptHandle: id,
-      } of data.Messages) {
-        handleMessage(Body, metadata);
-        removeFromQueue(id);
-      }
-      receiveMessage();
-    } else {
-      setTimeout(() => {
-        receiveMessage();
-      }, REFRESH_TIMEOUT_IN_SECOND * 1000);
-    }
-  });
-};
-
 const handleMessage = (data: string, metadata) => {
   var body = JSON.parse(data);
   console.log(new Date(), body);
 };
 
-const removeFromQueue = function (id: string) {
-  sqs.deleteMessage(
-    {
-      QueueUrl: process.env.SQS_RESPONSE_QUEUE_URL,
-      ReceiptHandle: id,
-    },
-    function (err, data) {
-      err && console.log(err);
-    }
-  );
-};
-
-receiveMessage();
+receiveMessage(
+  process.env.SQS_RESPONSE_QUEUE_URL,
+  receiveMessageParams,
+  handleMessage
+);
 
 router.get('/health', (req, res) => {
   res.send({ status: 'working' });
