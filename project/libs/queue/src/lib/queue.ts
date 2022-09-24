@@ -42,7 +42,7 @@ export function sendMessage(url: string, data: string, attributes = null) {
 const receiveMessageParams = {
   MaxNumberOfMessages: 10,
   VisibilityTimeout: 10,
-  WaitTimeSeconds: 0,
+  WaitTimeSeconds: 5,
   MessageAttributeNames: ['All'],
 };
 
