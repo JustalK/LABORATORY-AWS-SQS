@@ -1,6 +1,6 @@
 # LABORATORY-AWS-SQS
 
-![./documentation/graph.png](./documentation/graph.png)
+![./documentations/graph.png](./documentations/graph.png)
 
 This laboratory is a little experimentation with Amazon SQS. Using two **Express** apps in a **NX** WorkSpace, I am calculating the addition of two random numbers and passing the information through two SQS queue for creating a Request/Reply pattern. The first app API1 is responsible for giving two random numbers while the second app API2 is responsible for additionning this two numbers and give the result back to API1.
 
@@ -40,9 +40,9 @@ There are a bunch of options possible on the configuration of the queue such as:
 
 #### Create the queues on Amazon
 
-![./documentation/4.png](./documentation/4.png)
-![./documentation/3.png](./documentation/3.png)
-![./documentation/2.png](./documentation/2.png)
+![./documentations/4.png](./documentations/4.png)
+![./documentations/3.png](./documentations/3.png)
+![./documentations/2.png](./documentations/2.png)
 
 Once every queue has been created, the result is as follow.
 
@@ -50,7 +50,7 @@ Once every queue has been created, the result is as follow.
 - The `QUEUE B` is the `test-response.fifo`
 - The `DEAD QUEUE` is the `test-dead.fifo`
 
-![./documentation/1.png](./documentation/1.png)
+![./documentations/1.png](./documentations/1.png)
 
 #### Explanation
 
@@ -78,7 +78,7 @@ Many message can be sent and they will all be handle properly. This is the magic
 
 I can now see on my Postman the result of my call: http://localhost:1337/send
 
-![./documentation/test.png](./documentation/test.png)
+![./documentations/test.png](./documentations/test.png)
 
 ## Running
 
