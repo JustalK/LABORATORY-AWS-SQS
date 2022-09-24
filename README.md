@@ -16,7 +16,34 @@ I explain with all the details how I build the project and my way of working.
 - [Running](#running)
 - [System](#system)
 
+## Theory
+
+#### FIFO vs Standard
+
+On Amazon, there are two types of queue FIFO (first-in-first-out) and standard. By default, the queue on Amazon are in standard type. The standard type will try to process as many message as possible, even if it's in not in the right order and might create duplicate messages.
+
+On the other side, the FIFO queue will keep the order of the message but will only be able to handle up to 3k messages per second without batching. With batching, we can go up to 30k messages per seconds.
+
+#### Options
+
+There are a bunch of options possible on the configuration of the queue such as:
+
+- **Retention:** is the time a message will stay on the queue before it gets deleted.
+- **MessageGroupId:** Group the message into a group (a group can handle 20k messages max in flight, so be careful)
+- **MessageDeduplicationId:** Id of a message, it need to be unique or else no message will be sent.
+- **MaxNumberOfMessages:** The number max of message that can be handle when querying the queue
+- **WaitTimeSeconds:** The time for polling (meaning the time the connection for polling message will stay open). It avoid querying the queue often like we do in short polling.
+- **VisibilityTimeout:** The time a message will be invisible/lock for any other polling. If the message is not handle properly or take too long before getting deleted, it will be treated once again after this time.
+- **Dead queue**: A queue where with sent the message that has failed to be deleted after x polling.
+
 ## Development
+
+#### Create the queues on Amazon
+
+![./documentation/4.png](./documentation/4.png)
+![./documentation/3.png](./documentation/3.png)
+![./documentation/2.png](./documentation/2.png)
+![./documentation/1.png](./documentation/1.png)
 
 #### Create a lib
 
