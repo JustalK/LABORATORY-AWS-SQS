@@ -1,4 +1,5 @@
 const AWS = require('aws-sdk');
+const uniqid = require('uniqid');
 const REFRESH_TIMEOUT_IN_SECOND = 10;
 
 const SQS_CONFIG = {
@@ -9,7 +10,26 @@ const SQS_CONFIG = {
 
 const sqs = new AWS.SQS(SQS_CONFIG);
 
-export function sendMessage(params) {
+interface Message {
+  MessageAttributes?: any;
+  MessageDeduplicationId: string;
+  MessageGroupId: string;
+  MessageBody: string;
+  QueueUrl: string;
+}
+
+export function sendMessage(url: string, data: string, attributes = null) {
+  let params: Message = {
+    MessageDeduplicationId: uniqid(),
+    MessageGroupId: 'Test',
+    MessageBody: data,
+    QueueUrl: url,
+  };
+
+  if (attributes) {
+    params.MessageAttributes = attributes;
+  }
+
   sqs.sendMessage(params, function (err, data) {
     if (err) {
       console.log('Error', err);
@@ -19,7 +39,19 @@ export function sendMessage(params) {
   });
 }
 
-export const receiveMessage = (url, params, callback) => {
+const receiveMessageParams = {
+  MaxNumberOfMessages: 10,
+  VisibilityTimeout: 10,
+  WaitTimeSeconds: 0,
+  MessageAttributeNames: ['All'],
+};
+
+export const receiveMessage = (url: string, callback) => {
+  const params = {
+    ...receiveMessageParams,
+    QueueUrl: url,
+  };
+
   sqs.receiveMessage(params, (err, data) => {
     if (err) {
       console.log(err);
@@ -34,10 +66,10 @@ export const receiveMessage = (url, params, callback) => {
         callback(Body, metadata);
         deleteMessage(url, id);
       }
-      receiveMessage(url, params, callback);
+      receiveMessage(url, callback);
     } else {
       setTimeout(() => {
-        receiveMessage(url, params, callback);
+        receiveMessage(url, callback);
       }, REFRESH_TIMEOUT_IN_SECOND * 1000);
     }
   });
