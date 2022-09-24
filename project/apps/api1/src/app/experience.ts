@@ -1,6 +1,7 @@
 const express = require('express');
 const AWS = require('aws-sdk');
 const router = express.Router();
+const uniqid = require('uniqid');
 
 const SQS_CONFIG = {
   accessKeyId: process.env.ACCESS_KEY,
@@ -26,7 +27,7 @@ router.get('/send', (req, res) => {
         StringValue: 'API1',
       },
     },
-    MessageDeduplicationId: 'API1+',
+    MessageDeduplicationId: uniqid(),
     MessageGroupId: 'Test',
     MessageBody: JSON.stringify({
       Whatever1: Math.random() * 100,
@@ -47,7 +48,7 @@ router.get('/send', (req, res) => {
 });
 
 var receiveMessageParams = {
-  QueueUrl: process.env.SQS_QUEUE_URL,
+  QueueUrl: process.env.SQS_RESPONSE_QUEUE_URL,
   MaxNumberOfMessages: 10,
   VisibilityTimeout: 10,
   WaitTimeSeconds: 0,
@@ -68,10 +69,8 @@ const receiveMessage = () => {
         Body,
         ReceiptHandle: id,
       } of data.Messages) {
-        if (metadata.Sender.StringValue === 'API2') {
-          handleMessage(Body, metadata);
-          removeFromQueue(id);
-        }
+        handleMessage(Body, metadata);
+        removeFromQueue(id);
       }
       receiveMessage();
     } else {
@@ -90,7 +89,7 @@ const handleMessage = (data: string, metadata) => {
 const removeFromQueue = function (id: string) {
   sqs.deleteMessage(
     {
-      QueueUrl: process.env.SQS_QUEUE_URL,
+      QueueUrl: process.env.SQS_RESPONSE_QUEUE_URL,
       ReceiptHandle: id,
     },
     function (err, data) {

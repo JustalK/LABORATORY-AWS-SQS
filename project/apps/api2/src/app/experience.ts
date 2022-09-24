@@ -1,6 +1,7 @@
 const express = require('express');
 const AWS = require('aws-sdk');
 const router = express.Router();
+const uniqid = require('uniqid');
 
 const SQS_CONFIG = {
   accessKeyId: process.env.ACCESS_KEY,
@@ -23,7 +24,6 @@ var receiveMessageParams = {
 const receiveMessage = () => {
   console.log('API2');
   sqs.receiveMessage(receiveMessageParams, (err, data) => {
-    console.log('API2 +');
     if (err) {
       console.log(err);
     }
@@ -35,10 +35,8 @@ const receiveMessage = () => {
         Body,
         ReceiptHandle: id,
       } of data.Messages) {
-        if (metadata.Sender.StringValue === 'API1') {
-          handleMessage(Body, metadata);
-          removeFromQueue(id);
-        }
+        handleMessage(Body, metadata);
+        removeFromQueue(id);
       }
       receiveMessage();
     } else {
@@ -63,12 +61,12 @@ const sendMessage = (result, metadata) => {
         StringValue: 'API2',
       },
     },
-    MessageDeduplicationId: 'API2+',
+    MessageDeduplicationId: uniqid(),
     MessageGroupId: 'Test',
     MessageBody: JSON.stringify({
       result: result,
     }),
-    QueueUrl: process.env.SQS_QUEUE_URL,
+    QueueUrl: process.env.SQS_RESPONSE_QUEUE_URL,
   };
 
   sqs.sendMessage(params, function (err, data) {
