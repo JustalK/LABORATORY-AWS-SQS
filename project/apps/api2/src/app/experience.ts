@@ -1,8 +1,8 @@
-const express = require('express');
+import * as express from 'express';
 const router = express.Router();
 import { receiveMessage, sendMessage } from '@project/queue';
 
-const handleMessage = (data: string, metadata) => {
+const handleMessage = (data: string) => {
   var body = JSON.parse(data);
   console.log(new Date(), body);
   sendMessage(
@@ -15,8 +15,11 @@ const handleMessage = (data: string, metadata) => {
 
 receiveMessage(process.env.SQS_QUEUE_URL, handleMessage);
 
-router.get('/health', (req, res) => {
-  res.send({ status: 'working' });
-});
+router.get(
+  '/health',
+  (_req: express.Request, res: express.Response<{ status: string }>) => {
+    res.send({ status: 'working' });
+  }
+);
 
 module.exports = router;

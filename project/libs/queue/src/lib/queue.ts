@@ -46,7 +46,10 @@ const receiveMessageParams = {
   MessageAttributeNames: ['All'],
 };
 
-export const receiveMessage = (url: string, callback) => {
+export const receiveMessage = (
+  url: string,
+  callback: (data: string) => void
+) => {
   const params = {
     ...receiveMessageParams,
     QueueUrl: url,
@@ -59,11 +62,11 @@ export const receiveMessage = (url: string, callback) => {
 
     if (data.Messages) {
       for (const {
-        MessageAttributes: metadata,
+        MessageAttributes: _metadata,
         Body,
         ReceiptHandle: id,
       } of data.Messages) {
-        callback(Body, metadata);
+        callback(Body);
         deleteMessage(url, id);
       }
       receiveMessage(url, callback);

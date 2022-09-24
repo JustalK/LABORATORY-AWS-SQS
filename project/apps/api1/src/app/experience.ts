@@ -1,11 +1,11 @@
-const express = require('express');
+import * as express from 'express';
 const router = express.Router();
 import { receiveMessage, sendMessage } from '@project/queue';
 
 /**
  * Send a message
  */
-router.get('/send', (req, res) => {
+router.get('/send', (_req: express.Request, res: express.Response<boolean>) => {
   const attributes = {
     Date: {
       DataType: 'String',
@@ -27,15 +27,18 @@ router.get('/send', (req, res) => {
   res.send(true);
 });
 
-const handleMessage = (data: string, metadata) => {
+const handleMessage = (data: string) => {
   var body = JSON.parse(data);
   console.log(new Date(), body);
 };
 
 receiveMessage(process.env.SQS_RESPONSE_QUEUE_URL, handleMessage);
 
-router.get('/health', (req, res) => {
-  res.send({ status: 'working' });
-});
+router.get(
+  '/health',
+  (_req: express.Request, res: express.Response<{ status: string }>) => {
+    res.send({ status: 'working' });
+  }
+);
 
 module.exports = router;
