@@ -43,21 +43,40 @@ There are a bunch of options possible on the configuration of the queue such as:
 ![./documentation/4.png](./documentation/4.png)
 ![./documentation/3.png](./documentation/3.png)
 ![./documentation/2.png](./documentation/2.png)
+
+Once every queue has been created, the result is as follow.
+
+- The `QUEUE A` is the `test.fifo`
+- The `QUEUE B` is the `test-response.fifo`
+- The `DEAD QUEUE` is the `test-dead.fifo`
+
 ![./documentation/1.png](./documentation/1.png)
 
-#### Create a lib
+#### Explanation
+
+I have developed the whole connection between SQS and my app through a library in `libs/queue/src/lib/queue.ts`.
+
+For creating alib, I use the command from NX:
 
 ```bash
 npx nx g @nrwl/node:lib queue
 ```
 
-```js
-import { receiveMessage, sendMessage } from "@project/queue";
-```
+There are 3 exported functions:
+
+- **sendMessage**: Use for sending a message to one of the queue
+- **receiveMessage**: Use for receving the messages, it will be loop with a certain time define by the constant `REFRESH_TIMEOUT_IN_SECOND`. This is the function responsible for the polling. Once the message is polled, it passed to the callback function sent through the params and then the message is deleted from the poll.
+- **deleteMessage**: use for deleting the message that has been polled. This is use by the receiveMessage so it did not need to be exported.
+
+In API1, I have created a endpoint for sending the two numbers on the `QUEUE A` using the sendMessage function from the library. I have also used the receiveMessage to create a polling on the `QUEUE B`. The code is located in `apps/api1/src/app/experience.ts`.
+
+In the API2, there is less stuff since I did not have to create an endpoint. This api is only responsible for sending the result back to the `QUEUE B`. So I use the receiveMessage function for polling the message from the `QUEUE A`. Once I received something, I do my calculation and send back the result using the `sendMessage` to the `QUEUE B`.
+
+Many message can be sent and they will all be handle properly. This is the magic behind decoupling and SQS. The time for receiving and sending a message is 10s but it can be change with `REFRESH_TIMEOUT_IN_SECOND`
 
 ## Result
 
-I can now see on my Postman the result of my call:
+I can now see on my Postman the result of my call: http://localhost:1337/send
 
 ![./documentation/test.png](./documentation/test.png)
 
